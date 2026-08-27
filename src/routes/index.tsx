@@ -1,153 +1,343 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CheckCircle2, Clock, Building2, LockKeyhole, Eye, Gauge } from "lucide-react";
+import { useMemo, useState } from "react";
 import { SiteLayout } from "@/components/campsolver/SiteLayout";
-import { Skeleton } from "@/components/ui/skeleton";
-import { countersQueryOptions, POLL_INTERVAL_MS } from "@/lib/campsolver/api";
-import { formatHours, formatNumber } from "@/lib/campsolver/format";
+import { ArrowRight, PlusCircle, Search, Map as MapIcon, SlidersHorizontal, CheckCircle2, Clock } from "lucide-react";
+import { PublicIssueCard } from "@/components/issues/PublicIssueCard";
+import { Button } from "@/components/ui/button";
+import { usePublicIssues, usePublicIssueStats } from "@/hooks/usePublicIssues";
+import { usePublicRealtime } from "@/hooks/usePublicRealtime";
+import type { Issue, IssuePriority, IssueStatus } from "@/lib/types/issues";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "CampSolver — Public Campus Issue Transparency" },
-      {
-        name: "description",
-        content:
-          "Track campus issues from report to resolution. CampSolver publishes live counters, public issue status and before/after campus improvements — no login required.",
-      },
-      { property: "og:title", content: "CampSolver — Public Campus Issue Transparency" },
-      {
-        property: "og:description",
-        content:
-          "Live campus issue reporting and resolution data, open to everyone: statuses, resolution times and verified campus improvements.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: async ({ context }) => {
-    await context.queryClient
-      .ensureQueryData(countersQueryOptions())
-      .catch(() => null);
-  },
   component: HomePage,
 });
 
-function Counter({
-  label,
-  value,
-  Icon,
-  loading,
-}: {
-  label: string;
-  value: string;
-  Icon: typeof Clock;
-  loading: boolean;
-}) {
+function StatCard({ title, value, trend, trendUp, icon: Icon, colorClass }: any) {
   return (
-    <div className="rounded-xl border border-border/40 bg-surface-foreground/10 p-5 text-left backdrop-blur">
-      <Icon aria-hidden="true" className="size-5 text-accent" />
-      {loading ? (
-        <Skeleton className="mt-3 h-9 w-24 bg-surface-foreground/20" />
-      ) : (
-        <p className="mt-3 font-display text-3xl font-bold text-surface-foreground">{value}</p>
-      )}
-      <p className="mt-1 text-sm text-surface-foreground/75">{label}</p>
+    <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm flex flex-col justify-between h-32">
+      <div className="flex justify-between items-start">
+        <div className={`p-2 rounded-lg ${colorClass} bg-opacity-10 text-opacity-100`}>
+          <Icon className={`w-5 h-5 ${colorClass.replace('bg-', 'text-')}`} />
+        </div>
+        <span className="text-sm font-medium text-gray-500">{title}</span>
+      </div>
+      <div>
+        <div className="text-3xl font-bold text-gray-900">{value}</div>
+        <div className={`text-xs font-medium mt-1 flex items-center ${trendUp ? 'text-green-600' : 'text-red-500'}`}>
+          {trendUp ? '↑' : '↓'} {trend} this week
+        </div>
+      </div>
     </div>
   );
 }
 
-function HomePage() {
-  const counters = useQuery({
-    ...countersQueryOptions(),
-    refetchInterval: POLL_INTERVAL_MS,
-  });
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="h-72 rounded-xl border border-gray-100 bg-white animate-pulse" />
+      ))}
+    </div>
+  );
+}
 
-  const data = counters.data;
-  const loading = counters.isPending;
+function hashString(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getMarkerStyle(location: string, index: number) {
+  const hash = hashString(`${location}-${index}`);
+  return {
+    top: `${18 + (hash % 50)}%`,
+    left: `${12 + ((hash >> 3) % 70)}%`,
+  };
+}
+
+function getMarkerClass(issue: Issue) {
+  if (["RESOLVED", "VERIFIED", "CLOSED"].includes(issue.status)) {
+    return "bg-green-500 ring-green-100";
+  }
+
+  if (issue.priority === "HIGH") {
+    return "bg-red-500 ring-red-100";
+  }
+
+  if (issue.priority === "MEDIUM") {
+    return "bg-amber-500 ring-amber-100";
+  }
+
+  return "bg-blue-500 ring-blue-100";
+}
+
+function HomePage() {
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<IssueStatus | "ALL">("ALL");
+  const [priority, setPriority] = useState<IssuePriority | "ALL">("ALL");
+  const { connected } = usePublicRealtime();
+  const issuesQuery = usePublicIssues({ search, status, priority });
+  const statsQuery = usePublicIssueStats();
+
+  const issues = useMemo(
+    () => issuesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [issuesQuery.data],
+  );
+
+  const mapIssues = useMemo(() => {
+    const seen = new Set<string>();
+    return issues
+      .filter((issue) => {
+        if (!issue.location || seen.has(issue.location)) {
+          return false;
+        }
+
+        seen.add(issue.location);
+        return true;
+      })
+      .slice(0, 6);
+  }, [issues]);
+
+  const stats = statsQuery.data ?? {
+    total: 0,
+    pending: 0,
+    inProgress: 0,
+    resolved: 0,
+    critical: 0,
+    topCategory: "No data yet",
+    topLocation: "No data yet",
+    trendLabel: "0%",
+    trendUp: true,
+  };
+
+  const isLoading = issuesQuery.isLoading || statsQuery.isLoading;
+  const isError = issuesQuery.isError || statsQuery.isError;
 
   return (
     <SiteLayout>
-      <section className="surface-hero">
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:py-28">
-          <p className="inline-flex items-center gap-2 rounded-full border border-surface-foreground/25 px-3 py-1.5 text-xs font-semibold text-surface-foreground/85">
-            <Eye aria-hidden="true" className="size-3.5" />
-            Public transparency record — no login required
-          </p>
-          <h1 className="mt-6 max-w-3xl font-display text-4xl font-bold text-surface-foreground sm:text-5xl lg:text-6xl">
-            Every campus issue, tracked in the open until it's fixed.
-          </h1>
-          <p className="mt-5 max-w-2xl text-lg text-surface-foreground/80">
-            CampSolver is where students report campus problems and anyone can follow what happens
-            next — reviewed, assigned to a department, resolved, and published with proof. Personal
-            details stay private; accountability stays public.
-          </p>
-
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              to="/dashboard"
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:-translate-y-0.5"
-            >
-              View public dashboard
-              <ArrowRight aria-hidden="true" className="size-4" />
-            </Link>
-            <Link
-              to="/how-it-works"
-              className="inline-flex items-center gap-2 rounded-lg border border-surface-foreground/35 px-5 py-3 text-sm font-semibold text-surface-foreground transition-colors hover:bg-surface-foreground/10"
-            >
-              How it works
-            </Link>
+      {/* Hero Section */}
+      <section className="bg-[#0A3019] text-white pt-16 pb-24 overflow-hidden relative">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 relative z-10 grid md:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/90 mb-8">
+              <span className={`w-2 h-2 rounded-full ${connected ? "bg-[#FBBF24]" : "bg-white/60"}`}></span>
+              {connected ? "Live public transparency record" : "Public transparency record — no login required"}
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight mb-6">
+              Campus Issues,<br/>Visible to Everyone.
+            </h1>
+            <p className="text-lg text-white/70 mb-10 max-w-lg leading-relaxed">
+              See reported problems across campus, track their progress, and know when they are resolved. Student details stay private; accountability stays public.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <Link to="/report" className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#FBBF24] text-[#0A3019] px-6 py-3 font-semibold hover:bg-yellow-400 transition-colors">
+                <PlusCircle className="w-5 h-5" />
+                Report an Issue
+              </Link>
+              <Link to="/track" className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/30 px-6 py-3 font-semibold hover:bg-white/10 transition-colors">
+                <Search className="w-5 h-5" />
+                Track My Issue
+              </Link>
+            </div>
           </div>
-
-          <div className="mt-14 grid gap-4 sm:grid-cols-3">
-            <Counter
-              label="Issues resolved"
-              value={formatNumber(data?.issuesResolved)}
-              Icon={CheckCircle2}
-              loading={loading}
-            />
-            <Counter
-              label="Average resolution time"
-              value={formatHours(data?.avgResolutionHours)}
-              Icon={Clock}
-              loading={loading}
-            />
-            <Counter
-              label="Active departments"
-              value={formatNumber(data?.activeDepartments)}
-              Icon={Building2}
-              loading={loading}
-            />
+          
+          <div className="relative hidden md:block">
+            {/* Visual representation / Illustration placeholder */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 aspect-[4/3] flex items-center justify-center relative overflow-hidden shadow-2xl shadow-black/20">
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#0A3019] to-transparent opacity-50"></div>
+              <div className="flex gap-4 items-end justify-center w-full h-full p-8 opacity-80">
+                <div className="w-1/4 h-1/2 bg-white/20 rounded-t-lg"></div>
+                <div className="w-1/3 h-3/4 bg-white/30 rounded-t-lg relative">
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-red-500 p-2 rounded-full border-2 border-[#0A3019]">
+                    <span className="w-3 h-3 block bg-white rounded-full"></span>
+                  </div>
+                </div>
+                <div className="w-1/4 h-2/3 bg-white/20 rounded-t-lg"></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <h2 className="font-display text-3xl font-bold">Why a public site at all?</h2>
-        <div className="mt-8 grid gap-6 md:grid-cols-3">
-          {[
-            {
-              Icon: Eye,
-              title: "Visible progress",
-              body: "Each approved issue shows its current status and last update date, so nothing quietly disappears.",
-            },
-            {
-              Icon: Gauge,
-              title: "Measured performance",
-              body: "Resolution rate, average resolution time and monthly trends are published, not summarised.",
-            },
-            {
-              Icon: LockKeyhole,
-              title: "Private by design",
-              body: "No reporter identity, no exact GPS, no internal comments — only what the campus community needs to see.",
-            },
-          ].map(({ Icon, title, body }) => (
-            <article key={title} className="card-elevated p-6">
-              <Icon aria-hidden="true" className="size-6 text-primary" />
-              <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
-            </article>
-          ))}
+      {/* Main Content Area */}
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 -mt-10 relative z-20 pb-20">
+        
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
+          <StatCard title="Total Issues" value={stats.total} trend={stats.trendLabel} trendUp={stats.trendUp} icon={MapIcon} colorClass="bg-gray-500" />
+          <StatCard title="Pending" value={stats.pending} trend={stats.trendLabel} trendUp={stats.trendUp} icon={Clock} colorClass="bg-amber-500" />
+          <StatCard title="In Progress" value={stats.inProgress} trend={stats.trendLabel} trendUp={stats.trendUp} icon={SlidersHorizontal} colorClass="bg-blue-500" />
+          <StatCard title="Resolved" value={stats.resolved} trend={stats.trendLabel} trendUp={stats.trendUp} icon={CheckCircle2} colorClass="bg-green-500" />
+          <StatCard title="Critical" value={stats.critical} trend={stats.trendLabel} trendUp={!stats.trendUp} icon={MapIcon} colorClass="bg-red-500" />
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Left Column: Issues List */}
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Reported Campus Issues</h2>
+              <p className="text-gray-500 mt-1">Explore issues reported by students and track their real-time status.</p>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="flex flex-wrap gap-3 items-center bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <div className="relative flex-grow min-w-[200px]">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search issues..." className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-1 focus:ring-green-500 outline-none" />
+              </div>
+              <select value={status} onChange={(event) => setStatus(event.target.value as IssueStatus | "ALL")} className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
+                <option value="ALL">Status: All</option>
+                <option value="REPORTED">Reported</option>
+                <option value="ASSIGNED">Assigned</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="RESOLVED">Resolved</option>
+                <option value="VERIFIED">Verified</option>
+                <option value="CLOSED">Closed</option>
+              </select>
+              <select className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
+                <option>Department: All</option>
+              </select>
+              <select value={priority} onChange={(event) => setPriority(event.target.value as IssuePriority | "ALL")} className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
+                <option value="ALL">Priority: All</option>
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+              </select>
+            </div>
+
+            {/* Issue Cards */}
+            {isLoading ? (
+              <DashboardSkeleton />
+            ) : isError ? (
+              <div className="rounded-xl border border-red-100 bg-white p-8 text-center shadow-sm">
+                <p className="text-sm text-red-600 mb-4">Unable to load the public issue feed right now.</p>
+                <Button variant="outline" onClick={() => { void issuesQuery.refetch(); void statsQuery.refetch(); }}>
+                  Retry
+                </Button>
+              </div>
+            ) : issues.length === 0 ? (
+              <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+                No issues yet.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {issues.map(issue => (
+                  <PublicIssueCard key={issue.id} issue={issue} />
+                ))}
+              </div>
+            )}
+            
+            <div className="pt-4">
+              {issuesQuery.hasNextPage ? (
+                <Button
+                  variant="outline"
+                  className="w-full md:w-auto text-gray-600 border-gray-200"
+                  onClick={() => void issuesQuery.fetchNextPage()}
+                  disabled={issuesQuery.isFetchingNextPage}
+                >
+                  {issuesQuery.isFetchingNextPage ? "Loading..." : "Load More Issues"}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Right Column: Side Panels */}
+          <div className="space-y-6">
+            {/* Live Campus Map */}
+            <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4">Live Campus Issue Map</h3>
+              <div className="aspect-[4/3] bg-gray-50 rounded-lg border border-gray-100 flex items-center justify-center relative overflow-hidden mb-4">
+                 <div className="w-full h-full opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #cbd5e1 1px, transparent 0)', backgroundSize: '16px 16px' }}></div>
+                 {mapIssues.map((issue, index) => (
+                   <div
+                     key={`${issue.ticketId}-${issue.location}`}
+                     className={`absolute w-3 h-3 rounded-full border-2 border-white shadow-sm ring-4 ${getMarkerClass(issue)}`}
+                     style={getMarkerStyle(issue.location, index)}
+                     title={issue.location}
+                   />
+                 ))}
+              </div>
+              <div className="flex gap-4 text-xs font-medium text-gray-500">
+                <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-red-500 mr-1.5"></span> Critical</span>
+                <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-amber-500 mr-1.5"></span> High</span>
+                <span className="flex items-center"><span className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></span> Resolved</span>
+              </div>
+            </div>
+
+            {/* AI Intelligence */}
+            <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-gray-900">AI Issue Intelligence</h3>
+                <span className="text-xs font-bold text-green-600 uppercase">{connected ? "Realtime" : "Polling"}</span>
+              </div>
+              <div className="space-y-4 text-sm">
+                <div className="flex justify-between items-center border-b border-gray-50 pb-2">
+                  <span className="text-gray-500">Top reported category</span>
+                  <span className="font-semibold text-gray-900">{stats.topCategory}</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-gray-50 pb-2">
+                  <span className="text-gray-500">Most affected location</span>
+                  <span className="font-semibold text-gray-900 text-right">{stats.topLocation}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Weekly reporting trend</span>
+                  <span className={`font-semibold ${stats.trendUp ? "text-green-600" : "text-red-500"}`}>
+                    {stats.trendUp ? "Up" : "Down"} {stats.trendLabel}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Process Flow */}
+            <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
+              <h3 className="font-semibold text-gray-900 mb-4">No More Lost Complaints</h3>
+              
+              <div className="flex justify-between items-center mb-6 px-2 relative before:absolute before:top-1/2 before:-translate-y-1/2 before:left-6 before:right-6 before:h-0.5 before:bg-gray-100 before:z-0">
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center">
+                    <PlusCircle className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-500">Report</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center">
+                    <Search className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-500">Review</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center">
+                    <SlidersHorizontal className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-500">Assign</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <MapIcon className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-500">Repair</span>
+                </div>
+                <div className="flex flex-col items-center gap-1 relative z-10">
+                  <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center shadow-sm">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-medium text-gray-900">Resolved</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 leading-relaxed text-center">
+                Every issue receives a unique tracking ID and remains public until the repair is verified with photo evidence.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
     </SiteLayout>

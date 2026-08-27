@@ -1,15 +1,25 @@
 export type Priority = "LOW" | "MEDIUM" | "HIGH";
 
+/**
+ * Full issue lifecycle used across the public dashboard and the admin
+ * dashboard. The public site only ever displays approved statuses; the admin
+ * dashboard is the source of truth for all of them (including REOPENED,
+ * which represents a verification that was rejected and sent back to work).
+ */
 export type IssueStatus =
   | "REPORTED"
   | "UNDER_REVIEW"
   | "ASSIGNED"
   | "IN_PROGRESS"
   | "RESOLVED"
+  | "VERIFIED"
+  | "REOPENED"
   | "CLOSED";
 
 export interface PublicIssue {
   id: string;
+  /** Human-facing ticket reference, e.g. CS-2026-10241. */
+  ticketId: string;
   title: string;
   category: string;
   description: string;
@@ -24,6 +34,7 @@ export interface PublicIssue {
 
 export interface CampusImprovement {
   id: string;
+  ticketId?: string | null;
   problemDescription: string;
   beforeImageUrl?: string | null;
   resolutionDescription: string;
@@ -32,6 +43,7 @@ export interface CampusImprovement {
   title?: string | null;
   location?: string | null;
   category?: string | null;
+  department?: string | null;
 }
 
 export interface Paginated<T> {
@@ -47,6 +59,7 @@ export interface LiveCounters {
   avgResolutionHours: number;
   activeDepartments: number;
   totalIssues?: number;
+  totalPublicIssues?: number;
 }
 
 export interface StatisticsPayload {
@@ -57,11 +70,15 @@ export interface StatisticsPayload {
   mostImprovedLocations: { location: string; resolved: number }[];
 }
 
+export type SortOption = "newest" | "oldest" | "priority" | "updated";
+
 export interface IssueFilters {
   q?: string;
   category?: string;
   priority?: string;
   status?: string;
   location?: string;
+  sort?: SortOption;
   page?: number;
 }
+

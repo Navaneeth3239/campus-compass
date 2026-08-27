@@ -11,7 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as ImprovementsRouteImport } from './routes/improvements'
+import { Route as IssuesRouteImport } from './routes/issues'
+import { Route as ReportRouteImport } from './routes/report'
+import { Route as StatisticsRouteImport } from './routes/statistics'
+import { Route as TrackRouteImport } from './routes/track'
+import { Route as AdminIssuesRouteImport } from './routes/admin.issues'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as IssuesIdRouteImport } from './routes/issues.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -23,40 +32,157 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ImprovementsRoute = ImprovementsRouteImport.update({
+  id: '/improvements',
+  path: '/improvements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssuesRoute = IssuesRouteImport.update({
+  id: '/issues',
+  path: '/issues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportRoute = ReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatisticsRoute = StatisticsRouteImport.update({
+  id: '/statistics',
+  path: '/statistics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrackRoute = TrackRouteImport.update({
+  id: '/track',
+  path: '/track',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIssuesRoute = AdminIssuesRouteImport.update({
+  id: '/admin/issues',
+  path: '/admin/issues',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssuesIdRoute = IssuesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => IssuesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/improvements': typeof ImprovementsRoute
+  '/issues': typeof IssuesRouteWithChildren
+  '/report': typeof ReportRoute
+  '/statistics': typeof StatisticsRoute
+  '/track': typeof TrackRoute
+  '/admin/issues': typeof AdminIssuesRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/issues/$id': typeof IssuesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/improvements': typeof ImprovementsRoute
+  '/issues': typeof IssuesRouteWithChildren
+  '/report': typeof ReportRoute
+  '/statistics': typeof StatisticsRoute
+  '/track': typeof TrackRoute
+  '/admin/issues': typeof AdminIssuesRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/issues/$id': typeof IssuesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/dashboard': typeof DashboardRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/improvements': typeof ImprovementsRoute
+  '/issues': typeof IssuesRouteWithChildren
+  '/report': typeof ReportRoute
+  '/statistics': typeof StatisticsRoute
+  '/track': typeof TrackRoute
+  '/admin/issues': typeof AdminIssuesRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/issues/$id': typeof IssuesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/how-it-works'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/how-it-works'
+    | '/improvements'
+    | '/issues'
+    | '/report'
+    | '/statistics'
+    | '/track'
+    | '/admin/issues'
+    | '/admin/login'
+    | '/issues/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/how-it-works'
-  id: '__root__' | '/' | '/about' | '/how-it-works'
+  to:
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/how-it-works'
+    | '/improvements'
+    | '/issues'
+    | '/report'
+    | '/statistics'
+    | '/track'
+    | '/admin/issues'
+    | '/admin/login'
+    | '/issues/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/dashboard'
+    | '/how-it-works'
+    | '/improvements'
+    | '/issues'
+    | '/report'
+    | '/statistics'
+    | '/track'
+    | '/admin/issues'
+    | '/admin/login'
+    | '/issues/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  DashboardRoute: typeof DashboardRoute
   HowItWorksRoute: typeof HowItWorksRoute
+  ImprovementsRoute: typeof ImprovementsRoute
+  IssuesRoute: typeof IssuesRouteWithChildren
+  ReportRoute: typeof ReportRoute
+  StatisticsRoute: typeof StatisticsRoute
+  TrackRoute: typeof TrackRoute
+  AdminIssuesRoute: typeof AdminIssuesRoute
+  AdminLoginRoute: typeof AdminLoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/how-it-works': {
       id: '/how-it-works'
       path: '/how-it-works'
@@ -82,13 +215,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/improvements': {
+      id: '/improvements'
+      path: '/improvements'
+      fullPath: '/improvements'
+      preLoaderRoute: typeof ImprovementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issues': {
+      id: '/issues'
+      path: '/issues'
+      fullPath: '/issues'
+      preLoaderRoute: typeof IssuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/report': {
+      id: '/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/statistics': {
+      id: '/statistics'
+      path: '/statistics'
+      fullPath: '/statistics'
+      preLoaderRoute: typeof StatisticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/track': {
+      id: '/track'
+      path: '/track'
+      fullPath: '/track'
+      preLoaderRoute: typeof TrackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/issues': {
+      id: '/admin/issues'
+      path: '/admin/issues'
+      fullPath: '/admin/issues'
+      preLoaderRoute: typeof AdminIssuesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issues/$id': {
+      id: '/issues/$id'
+      path: '/$id'
+      fullPath: '/issues/$id'
+      preLoaderRoute: typeof IssuesIdRouteImport
+      parentRoute: typeof IssuesRoute
+    }
   }
 }
+
+interface IssuesRouteChildren {
+  IssuesIdRoute: typeof IssuesIdRoute
+}
+
+const IssuesRouteChildren: IssuesRouteChildren = {
+  IssuesIdRoute: IssuesIdRoute,
+}
+
+const IssuesRouteWithChildren =
+  IssuesRoute._addFileChildren(IssuesRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  DashboardRoute: DashboardRoute,
   HowItWorksRoute: HowItWorksRoute,
+  ImprovementsRoute: ImprovementsRoute,
+  IssuesRoute: IssuesRouteWithChildren,
+  ReportRoute: ReportRoute,
+  StatisticsRoute: StatisticsRoute,
+  TrackRoute: TrackRoute,
+  AdminIssuesRoute: AdminIssuesRoute,
+  AdminLoginRoute: AdminLoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

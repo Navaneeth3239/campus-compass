@@ -1,113 +1,140 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { ShieldOff, Target, Scale } from "lucide-react";
-import { SiteLayout } from "@/components/campsolver/SiteLayout";
+import { createFileRoute } from '@tanstack/react-router'
+import { LightSiteLayout } from '@/components/campsolver/LightSiteLayout'
+import { Lock, FileText, CheckCircle2, ShieldCheck, MapPin, Search } from 'lucide-react'
 
-export const Route = createFileRoute("/about")({
-  head: () => ({
-    meta: [
-      { title: "About CampSolver — Mission & Privacy Commitments" },
-      {
-        name: "description",
-        content:
-          "CampSolver's mission, how campus issues stay accountable after they are reported, and exactly which personal details are never published.",
-      },
-      { property: "og:title", content: "About CampSolver — Mission & Privacy Commitments" },
-      {
-        property: "og:description",
-        content:
-          "Learn how CampSolver keeps campus issue resolution accountable while never publishing reporter identity, exact GPS or internal comments.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-    ],
-  }),
+export const Route = createFileRoute('/about')({
   component: AboutPage,
-});
-
-const neverPublished = [
-  "Student name",
-  "Student email address",
-  "Student phone number",
-  "Exact GPS location of a report",
-  "Internal staff or department comments",
-];
+})
 
 function AboutPage() {
   return (
-    <SiteLayout>
-      <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-        <h1 className="font-display text-4xl font-bold">About CampSolver</h1>
-        <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
-          CampSolver connects the people who notice campus problems with the departments who can fix
-          them — and keeps the record of that work public. Anyone can read this site: prospective
-          students, parents, staff, and student bodies, without an account.
-        </p>
+    <LightSiteLayout>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 lg:py-24 grid lg:grid-cols-2 gap-16 lg:gap-8">
+        
+        {/* Left Content Column */}
+        <div className="space-y-12">
+          
+          <div className="space-y-6">
+            <h1 className="text-4xl md:text-5xl font-display font-bold text-[#0A3019]">
+              About CampSolver
+            </h1>
+            <p className="text-lg text-gray-700 leading-relaxed max-w-xl">
+              CampSolver was founded by a coalition of students and facility managers who
+              realized that campus repairs stall not due to neglect, but because of
+              communication friction.
+            </p>
+          </div>
 
-        <section className="mt-12">
-          <h2 className="inline-flex items-center gap-2 font-display text-2xl font-bold">
-            <Target aria-hidden="true" className="size-6 text-primary" />
-            Our mission
-          </h2>
-          <p className="mt-4 leading-relaxed text-muted-foreground">
-            Make campus maintenance and safety issues impossible to ignore. When a broken light,
-            flooded corridor or unsafe walkway is reported, it should be traceable from report to
-            repair — with dates the community can check.
-          </p>
-        </section>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-green-700" />
+              Our mission
+            </h2>
+            <p className="text-gray-600 leading-relaxed">
+              To make campus maintenance and safety issues impossible to ignore. When a broken
+              light, flooded corridor, or unsafe walkway is reported, it should be traceable from report
+              to repair—with dates and evidence the community can check.
+            </p>
+          </div>
 
-        <section className="mt-12">
-          <h2 className="inline-flex items-center gap-2 font-display text-2xl font-bold">
-            <Scale aria-hidden="true" className="size-6 text-primary" />
-            How issues stay accountable
-          </h2>
-          <ul className="mt-4 space-y-3 text-muted-foreground">
-            <li className="card-elevated p-4">
-              <strong className="text-foreground">Every approved issue is timestamped.</strong> The
-              reported date and last updated date are both public, so stalled work is visible.
-            </li>
-            <li className="card-elevated p-4">
-              <strong className="text-foreground">Status changes are published.</strong> Reviewed,
-              assigned, in progress and resolved states appear here as they happen.
-            </li>
-            <li className="card-elevated p-4">
-              <strong className="text-foreground">Resolutions require evidence.</strong> Campus
-              improvements are shown with before and after context, not just a "closed" label.
-            </li>
-            <li className="card-elevated p-4">
-              <strong className="text-foreground">Aggregate performance is open.</strong> Resolution
-              rate and average resolution time are published for the whole campus.
-            </li>
-          </ul>
-        </section>
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-700" />
+              How issues stay accountable
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <p className="text-gray-700">
+                  <strong className="text-gray-900">Every approved issue is timestamped.</strong> The reported date and last updated date are both
+                  public, so stalled work is immediately visible to everyone.
+                </p>
+              </div>
 
-        <section className="mt-12 rounded-xl border border-primary/25 bg-secondary p-6">
-          <h2 className="inline-flex items-center gap-2 font-display text-2xl font-bold">
-            <ShieldOff aria-hidden="true" className="size-6 text-primary" />
-            Privacy statement
-          </h2>
-          <p className="mt-4 text-secondary-foreground">
-            Transparency applies to the issue, never to the person who reported it. The following are{" "}
-            <strong>never published</strong> on this website:
-          </p>
-          <ul className="mt-4 space-y-2">
-            {neverPublished.map((item) => (
-              <li key={item} className="flex items-start gap-2 text-sm text-secondary-foreground">
-                <span
-                  aria-hidden="true"
-                  className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-high text-xs font-bold text-high-foreground"
-                >
-                  ✕
-                </span>
-                {item}
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <p className="text-gray-700">
+                  <strong className="text-gray-900">Status changes are published.</strong> Reviewed, assigned, in progress, and resolved states
+                  appear here automatically as they happen in real-time.
+                </p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <p className="text-gray-700">
+                  <strong className="text-gray-900">Resolutions require evidence.</strong> Campus improvements are shown with before and after
+                  photo context, not just a dry 'closed' label.
+                </p>
+              </div>
+
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <p className="text-gray-700">
+                  <strong className="text-gray-900">Aggregate performance is open.</strong> Resolution rates, active teams, and average speed are
+                  open to study for the whole campus community.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+
+        {/* Right Content Column */}
+        <div className="lg:pl-8">
+          <div className="bg-[#F0FDF4] border border-green-100 rounded-2xl p-8 sticky top-24">
+            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-6">
+              <Lock className="w-6 h-6 text-green-700" />
+              Privacy statement
+            </h3>
+            
+            <p className="text-gray-700 mb-8 leading-relaxed">
+              To prevent retaliation, harassment, or social pressure,
+              CampSolver strictly removes identifying data from public
+              record. Public pages render only the redacted fields approved
+              for the public issues view, so the following items are always
+              excluded before publication:
+            </p>
+
+            <ul className="space-y-4 mb-8">
+              <li className="flex items-center gap-3 text-sm font-semibold text-gray-900">
+                <div className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <span className="text-[10px]">✕</span>
+                </div>
+                Student name
               </li>
-            ))}
-          </ul>
-          <p className="mt-4 text-sm text-secondary-foreground">
-            Locations are shown only as a general campus area (for example "Central Library, Block
-            B"). Images appear publicly only after they have been approved for publication.
-          </p>
-        </section>
+              <li className="flex items-center gap-3 text-sm font-semibold text-gray-900">
+                <div className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <span className="text-[10px]">✕</span>
+                </div>
+                Student email address
+              </li>
+              <li className="flex items-center gap-3 text-sm font-semibold text-gray-900">
+                <div className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <span className="text-[10px]">✕</span>
+                </div>
+                Student phone number
+              </li>
+              <li className="flex items-center gap-3 text-sm font-semibold text-gray-900">
+                <div className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <span className="text-[10px]">✕</span>
+                </div>
+                Exact GPS location of a report
+              </li>
+              <li className="flex items-center gap-3 text-sm font-semibold text-gray-900">
+                <div className="w-5 h-5 rounded-full bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <span className="text-[10px]">✕</span>
+                </div>
+                Internal staff or department comments
+              </li>
+            </ul>
+
+            <div className="pt-6 border-t border-green-200 text-sm text-gray-600 leading-relaxed">
+              Locations are shown only as a general campus area (for example:
+              "Central Library, Block B"). Images appear publicly only after they
+              have been approved for publication by moderators. Names, emails,
+              and exact GPS coordinates are never exposed on public pages.
+            </div>
+          </div>
+        </div>
+
       </div>
-    </SiteLayout>
-  );
+    </LightSiteLayout>
+  )
 }
