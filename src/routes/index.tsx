@@ -2,11 +2,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { SiteLayout } from "@/components/campsolver/SiteLayout";
 import { ArrowRight, PlusCircle, Search, Map as MapIcon, SlidersHorizontal, CheckCircle2, Clock } from "lucide-react";
-import { PublicIssueCard } from "@/components/issues/PublicIssueCard";
+import { PublicIssueCard } from "@/components/campsolver/PublicIssueCard";
 import { Button } from "@/components/ui/button";
-import { usePublicIssues, usePublicIssueStats } from "@/hooks/usePublicIssues";
-import { usePublicRealtime } from "@/hooks/usePublicRealtime";
-import type { Issue, IssuePriority, IssueStatus } from "@/lib/types/issues";
+import { useCampusCounters, useCampusIssues, useCampusStatistics } from "@/hooks/useCampusData";
+import type { Priority, PublicIssue } from "@/lib/campsolver/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -63,7 +62,7 @@ function getMarkerStyle(location: string, index: number) {
   };
 }
 
-function getMarkerClass(issue: Issue) {
+function getMarkerClass(issue: PublicIssue) {
   if (["RESOLVED", "VERIFIED", "CLOSED"].includes(issue.status)) {
     return "bg-green-500 ring-green-100";
   }
@@ -81,11 +80,11 @@ function getMarkerClass(issue: Issue) {
 
 function HomePage() {
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<IssueStatus | "ALL">("ALL");
-  const [priority, setPriority] = useState<IssuePriority | "ALL">("ALL");
-  const { connected } = usePublicRealtime();
-  const issuesQuery = usePublicIssues({ search, status, priority });
-  const statsQuery = usePublicIssueStats();
+  const [status, setStatus] = useState<string | "ALL">("ALL");
+  const [priority, setPriority] = useState<Priority | "ALL">("ALL");
+  const issuesQuery = useCampusIssues({ q: search, status, priority });
+  const countersQuery = useCampusCounters();
+  const statisticsQuery = useCampusStatistics();
 
   const issues = useMemo(
     () => issuesQuery.data?.pages.flatMap((page) => page.items) ?? [],
@@ -106,20 +105,15 @@ function HomePage() {
       .slice(0, 6);
   }, [issues]);
 
-  const stats = statsQuery.data ?? {
-    total: 0,
-    pending: 0,
-    inProgress: 0,
-    resolved: 0,
-    critical: 0,
-    topCategory: "No data yet",
-    topLocation: "No data yet",
-    trendLabel: "0%",
-    trendUp: true,
-  };
+  const counters = countersQuery.data;
+  const statistics = statisticsQuery.data;
+  const totalIssues = counters?.totalPublicIssues ?? counters?.totalIssues ?? issuesQuery.data?.pages[0]?.total ?? 0;
+  const resolutionRate = statistics?.resolutionRate.ratePercent ?? 0;
+  const topCategory = statistics?.byCategory[0]?.category ?? "No data yet";
+  const topLocation = statistics?.mostImprovedLocations[0]?.location ?? "No data yet";
 
-  const isLoading = issuesQuery.isLoading || statsQuery.isLoading;
-  const isError = issuesQuery.isError || statsQuery.isError;
+  const isLoading = issuesQuery.isLoading || countersQuery.isLoading || statisticsQuery.isLoading;
+  const isError = issuesQuery.isError || countersQuery.isError || statisticsQuery.isError;
 
   return (
     <SiteLayout>
@@ -128,8 +122,8 @@ function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 relative z-10 grid md:grid-cols-2 gap-12 items-center">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-1.5 text-xs font-medium text-white/90 mb-8">
-              <span className={`w-2 h-2 rounded-full ${connected ? "bg-[#FBBF24]" : "bg-white/60"}`}></span>
-              {connected ? "Live public transparency record" : "Public transparency record — no login required"}
+              <span className="w-2 h-2 rounded-full bg-[#FBBF24]"></span>
+              Public transparency record — no login required
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold leading-tight mb-6">
               Campus Issues,<br/>Visible to Everyone.
@@ -172,11 +166,11 @@ function HomePage() {
         
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-12">
-          <StatCard title="Total Issues" value={stats.total} trend={stats.trendLabel} trendUp={stats.trendUp} icon={MapIcon} colorClass="bg-gray-500" />
-          <StatCard title="Pending" value={stats.pending} trend={stats.trendLabel} trendUp={stats.trendUp} icon={Clock} colorClass="bg-amber-500" />
-          <StatCard title="In Progress" value={stats.inProgress} trend={stats.trendLabel} trendUp={stats.trendUp} icon={SlidersHorizontal} colorClass="bg-blue-500" />
-          <StatCard title="Resolved" value={stats.resolved} trend={stats.trendLabel} trendUp={stats.trendUp} icon={CheckCircle2} colorClass="bg-green-500" />
-          <StatCard title="Critical" value={stats.critical} trend={stats.trendLabel} trendUp={!stats.trendUp} icon={MapIcon} colorClass="bg-red-500" />
+          <StatCard title="Public Issues" value={totalIssues} trend="Public feed" trendUp icon={MapIcon} colorClass="bg-gray-500" />
+          <StatCard title="Resolved" value={counters?.issuesResolved ?? 0} trend="Completed" trendUp icon={CheckCircle2} colorClass="bg-green-500" />
+          <StatCard title="Resolution Rate" value={`${resolutionRate}%`} trend="All time" trendUp icon={SlidersHorizontal} colorClass="bg-blue-500" />
+          <StatCard title="Avg. Resolution" value={`${counters?.avgResolutionHours ?? 0}h`} trend="Reported average" trendUp icon={Clock} colorClass="bg-amber-500" />
+          <StatCard title="Departments" value={counters?.activeDepartments ?? 0} trend="Active teams" trendUp icon={MapIcon} colorClass="bg-red-500" />
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
@@ -193,7 +187,7 @@ function HomePage() {
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input type="text" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search issues..." className="w-full pl-9 pr-4 py-2 bg-gray-50 border-none rounded-lg text-sm focus:ring-1 focus:ring-green-500 outline-none" />
               </div>
-              <select value={status} onChange={(event) => setStatus(event.target.value as IssueStatus | "ALL")} className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
+              <select value={status} onChange={(event) => setStatus(event.target.value)} className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
                 <option value="ALL">Status: All</option>
                 <option value="REPORTED">Reported</option>
                 <option value="ASSIGNED">Assigned</option>
@@ -205,7 +199,7 @@ function HomePage() {
               <select className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
                 <option>Department: All</option>
               </select>
-              <select value={priority} onChange={(event) => setPriority(event.target.value as IssuePriority | "ALL")} className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
+              <select value={priority} onChange={(event) => setPriority(event.target.value as Priority | "ALL")} className="bg-gray-50 border-none rounded-lg px-3 py-2 text-sm text-gray-600 outline-none focus:ring-1 focus:ring-green-500">
                 <option value="ALL">Priority: All</option>
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
@@ -219,7 +213,7 @@ function HomePage() {
             ) : isError ? (
               <div className="rounded-xl border border-red-100 bg-white p-8 text-center shadow-sm">
                 <p className="text-sm text-red-600 mb-4">Unable to load the public issue feed right now.</p>
-                <Button variant="outline" onClick={() => { void issuesQuery.refetch(); void statsQuery.refetch(); }}>
+                <Button variant="outline" onClick={() => { void issuesQuery.refetch(); void countersQuery.refetch(); void statisticsQuery.refetch(); }}>
                   Retry
                 </Button>
               </div>
@@ -276,21 +270,21 @@ function HomePage() {
             <div className="bg-white rounded-xl p-5 border border-gray-100 shadow-sm">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-semibold text-gray-900">AI Issue Intelligence</h3>
-                <span className="text-xs font-bold text-green-600 uppercase">{connected ? "Realtime" : "Polling"}</span>
+                <span className="text-xs font-bold text-green-600 uppercase">Live data</span>
               </div>
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between items-center border-b border-gray-50 pb-2">
                   <span className="text-gray-500">Top reported category</span>
-                  <span className="font-semibold text-gray-900">{stats.topCategory}</span>
+                  <span className="font-semibold text-gray-900">{topCategory}</span>
                 </div>
                 <div className="flex justify-between items-center border-b border-gray-50 pb-2">
                   <span className="text-gray-500">Most affected location</span>
-                  <span className="font-semibold text-gray-900 text-right">{stats.topLocation}</span>
+                  <span className="font-semibold text-gray-900 text-right">{topLocation}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Weekly reporting trend</span>
-                  <span className={`font-semibold ${stats.trendUp ? "text-green-600" : "text-red-500"}`}>
-                    {stats.trendUp ? "Up" : "Down"} {stats.trendLabel}
+                  <span className="font-semibold text-green-600">
+                    {resolutionRate}% resolved
                   </span>
                 </div>
               </div>

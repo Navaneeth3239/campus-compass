@@ -62,22 +62,24 @@ function normalizeList<T>(raw: unknown, pageSize: number, page: number): Paginat
 
 export const PAGE_SIZE = 9;
 
+export async function fetchPublicIssues(filters: IssueFilters): Promise<Paginated<PublicIssue>> {
+  const page = filters.page ?? 1;
+  const raw = await apiGet<unknown>("/public/issues", {
+    search: filters.q,
+    category: filters.category,
+    priority: filters.priority,
+    status: filters.status,
+    location: filters.location,
+    page,
+    limit: PAGE_SIZE,
+  });
+  return normalizeList<PublicIssue>(raw, PAGE_SIZE, page);
+}
+
 export const issuesQueryOptions = (filters: IssueFilters) =>
   queryOptions({
     queryKey: ["public-issues", filters],
-    queryFn: async () => {
-      const page = filters.page ?? 1;
-      const raw = await apiGet<unknown>("/public/issues", {
-        search: filters.q,
-        category: filters.category,
-        priority: filters.priority,
-        status: filters.status,
-        location: filters.location,
-        page,
-        limit: PAGE_SIZE,
-      });
-      return normalizeList<PublicIssue>(raw, PAGE_SIZE, page);
-    },
+    queryFn: () => fetchPublicIssues(filters),
   });
 
 export const countersQueryOptions = () =>
